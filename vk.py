@@ -138,6 +138,9 @@ class VKSource(RB.BrowserSource):
 		self.get_children()[0].get_children()[1].get_children()[1].hide()
 		self.get_children()[0].get_children()[1].attach_next_to(search_line,self.get_children()[0].get_children()[1].get_children()[0],Gtk.PositionType.LEFT, 3, 1)
 
+		search = VkontakteSearch("", "", self.db, self.props.entry_type, self.props.query_model, self.TOKEN, self.USER_ID);
+		search.my()
+
 	def do_selected(self):
 		if not self.initialised :
 			self.initialised = True
@@ -183,6 +186,9 @@ class VKSource(RB.BrowserSource):
 		self.props.shell.props.db.entry_delete_by_type(self.props.entry_type)
 		self.props.shell.props.db.commit()
 
+		search = VkontakteSearch("", "", self.db, self.props.entry_type, self.props.query_model, self.TOKEN, self.USER_ID);
+		search.my()
+
 	def do_impl_delete_thyself(self):
 		if self.initialised:
 			self.props.shell.props.db.entry_delete_by_type(self.props.entry_type)
@@ -200,7 +206,7 @@ class XMLResult:
 		self.url = entry.getElementsByTagName('url')[0].firstChild.nodeValue
 
 class VkontakteSearch:
-	def __init__(self, search_line, search_num, db, entry_type, query_model, TOKEN):
+	def __init__(self, search_line, search_num, db, entry_type, query_model, TOKEN, USER_ID):
 		self.search_line = search_line
 		self.search_num = search_num
 		self.db = db
@@ -208,6 +214,7 @@ class VkontakteSearch:
 		self.query_model = query_model
 		self.entries_hashes = []
 		self.TOKEN = TOKEN
+		self.USER_ID = USER_ID
 		
 	def add_entry(self, result):
 		# add only distinct songs (unique by title+artist+duration) to prevent duplicates
@@ -251,12 +258,17 @@ class VkontakteSearch:
 			label.show_all()
 			d.run()
 			d.destroy()
-		for audio in audios:
+		for audio in reversed(audios):
 			self.add_entry(XMLResult(audio))
 
 	# Starts searching
 	def start(self):
 		path = "https://api.vk.com/method/audio.search.xml?auto_complete=1&count=%s&&q=%s&access_token=%s" % (self.search_num,urllib2.quote(self.search_line),self.TOKEN)
+		loader = rb.Loader()
+		loader.get_url(path, self.on_search_results_recieved)
+
+	def my(self):
+		path = "https://api.vk.com/method/audio.get.xml?owner_id=%s&access_token=%s" % (self.USER_ID,self.TOKEN)
 		loader = rb.Loader()
 		loader.get_url(path, self.on_search_results_recieved)
 
